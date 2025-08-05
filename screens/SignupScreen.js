@@ -1,17 +1,55 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const BASE_URL = 'http://192.168.242.34:5000'; // Change to IP if needed
 
 export default function SignupScreen({ navigation }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     if (!name || !email || !password) {
       Alert.alert('Error', 'All fields are required');
-    } else {
-      // Simulate successful signup
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Signup failed');
+      }
+
+      // Save token and user info
+      await AsyncStorage.setItem('token', data.token);
+      await AsyncStorage.setItem('user', JSON.stringify(data.user));
+
       navigation.replace('Main');
+    } catch (error) {
+      Alert.alert('Signup Error', error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -19,12 +57,14 @@ export default function SignupScreen({ navigation }) {
     <View style={styles.container}>
       <Text style={styles.title}>Sign Up Here</Text>
       <Text style={styles.subtitle}>to start planning your trip like a pro!</Text>
+
       <TextInput
         placeholder="Name"
         value={name}
         onChangeText={setName}
         style={styles.input}
       />
+
       <TextInput
         placeholder="Email address"
         value={email}
@@ -33,6 +73,7 @@ export default function SignupScreen({ navigation }) {
         autoCapitalize="none"
         style={styles.input}
       />
+
       <TextInput
         placeholder="Password"
         value={password}
@@ -40,17 +81,23 @@ export default function SignupScreen({ navigation }) {
         secureTextEntry
         style={styles.input}
       />
-      <TouchableOpacity onPress={handleSignup} style={styles.button}>
-        <Text style={styles.buttonText}>Sign Up</Text>
+
+      <TouchableOpacity onPress={handleSignup} style={styles.button} disabled={loading}>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Sign Up</Text>
+        )}
       </TouchableOpacity>
+
       <Text style={styles.link}>Already a user?</Text>
       <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.button}>
         <Text style={styles.buttonText}>Log In</Text>
       </TouchableOpacity>
-        
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -66,7 +113,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#000000ff',
   },
-  subtitle :{
+  subtitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 20,

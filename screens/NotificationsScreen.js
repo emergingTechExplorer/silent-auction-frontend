@@ -1,25 +1,44 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const notifications = [
-  {
-    id: '1',
-    type: 'outbid',
-    title: 'You have been outbid',
-    message: 'Make a counter-offer!\n24hrs remaining until deadline!',
-    time: 'now',
-  },
-  {
-    id: '2',
-    type: 'won',
-    title: 'Your bid has won',
-    message: 'Get ready to grab your item!\nIf you are up for it, bid again for a different item!',
-    time: 'now',
-  },
-];
+const BASE_URL = 'http://192.168.242.34:5000';
 
 export default function NotificationsScreen() {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchNotifications = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${BASE_URL}/api/notifications`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || 'Failed to load notifications');
+      setNotifications(data);
+    } catch (err) {
+      console.error('Fetch notifications error:', err);
+      Alert.alert('Error', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
   const renderItem = ({ item }) => (
     <View style={styles.notification}>
       <View style={styles.iconRow}>
@@ -27,27 +46,40 @@ export default function NotificationsScreen() {
           style={[
             styles.dot,
             {
-              backgroundColor:
-                item.type === 'outbid' ? '#2ecc71' : '#00bcd4',
+              backgroundColor: item.type === 'outbid' ? '#2ecc71' : '#00bcd4',
             },
           ]}
         />
-        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.title}>
+          {item.type === 'won' ? 'Your bid has won' : 'You have been outbid'}
+        </Text>
         <Text style={styles.dotSeparator}>•</Text>
-        <Text style={styles.time}>{item.time}</Text>
+        <Text style={styles.time}>
+          {new Date(item.created_at).toLocaleTimeString()}
+        </Text>
       </View>
       <Text style={styles.message}>{item.message}</Text>
     </View>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#287778" />
+        <Text style={{ marginTop: 10 }}>Loading notifications...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Notifications</Text>
       <FlatList
         data={notifications}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id}
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 20 }}
+        ListEmptyComponent={<Text>No notifications found.</Text>}
       />
     </View>
   );
@@ -55,7 +87,7 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 40,
+    paddingTop: 60,
     paddingHorizontal: 20,
     backgroundColor: '#fff',
     flex: 1,

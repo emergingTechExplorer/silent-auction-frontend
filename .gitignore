@@ -1,0 +1,93 @@
+# React Native
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn.lock
+package-lock.json
+.expo/
+.expo-shared/
+
+# Metro cache
+metro-cache/
+dist/
+tmp/
+temp/
+
+# React Native Packager
+*.pack
+*.map
+*.hprof
+
+# Expo files
+*.expo
+*.expo.*
+web-build/
+
+# Android
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+android/local.properties
+android/.cxx/
+*.iml
+*.apk
+*.aar
+*.keystore
+.gradle/
+build/
+
+# iOS
+ios/Pods/
+ios/Podfile.lock
+ios/Podfile
+ios/build/
+ios/DerivedData/
+ios/*.xcodeproj/
+ios/*.xcworkspace/
+ios/*.xcuserdata/
+ios/*.xcuserdatad/
+ios/*.hmap
+ios/.DS_Store
+
+# macOS & Xcode
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Testing
+coverage/
+jest/
+*.test.js
+*.spec.js
+
+# Misc
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.log
+
+# Firebase/Google services
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# Watchman
+.watchmanconfig
