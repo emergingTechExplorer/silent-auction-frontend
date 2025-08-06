@@ -31,7 +31,6 @@ export default function MyItemsScreen({ navigation }) {
     loadItems();
   }, []));
 
-  // Live countdown refresh every second
   useEffect(() => {
     const interval = setInterval(() => {
       setItems((prev) => [...prev]);

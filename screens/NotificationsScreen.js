@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -16,14 +16,14 @@ export default function NotificationsScreen() {
   useFocusEffect(
     useCallback(() => {
       const loadNotifications = async () => {
-        setLoading(true); // Add this to ensure loading is reset on focus
+        setLoading(true);
         try {
           const data = await fetchNotifications();
           setNotifications(data);
         } catch (err) {
           console.error("Error loading notifications:", err.message);
         } finally {
-          setLoading(false); // ✅ This is critical
+          setLoading(false);
         }
       };
       loadNotifications();

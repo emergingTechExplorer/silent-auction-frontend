@@ -40,7 +40,6 @@ export default function SignupScreen({ navigation }) {
         throw new Error(data.message || 'Signup failed');
       }
 
-      // Save token and user info
       await AsyncStorage.setItem('token', data.token);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
 

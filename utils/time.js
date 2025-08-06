@@ -26,7 +26,6 @@ export const getDigitalCountdown = (deadline) => {
   return `${h}:${m}:${s}`;
 };
 
-// NEW: For bulk countdown updates (used in MyBidsScreen)
 export const getLiveCountdowns = (items) => {
   const now = Date.now();
   const countdownMap = {};
