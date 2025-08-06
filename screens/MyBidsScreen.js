@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { fetchMyBids } from '../utils/api';
+import { fetchMyBids, getImageUrl } from '../utils/api';
 import { getLiveCountdowns } from '../utils/time';
 
 export default function MyBidsScreen({ navigation }) {
@@ -45,7 +45,6 @@ export default function MyBidsScreen({ navigation }) {
 
   const renderItem = ({ item }) => {
     const itemData = item.item_id;
-    const image = itemData.images?.[0];
     const deadlineFormatted = new Date(itemData.deadline).toLocaleString(undefined, {
       year: "numeric",
       month: "short",
@@ -63,7 +62,7 @@ export default function MyBidsScreen({ navigation }) {
         onPress={() => navigation.navigate('ItemDetails', { item: itemData })}
       >
         <View style={styles.row}>
-          <Image source={{ uri: image }} style={styles.image} />
+          <Image source={{ uri: getImageUrl(itemData.images?.[0]) }} style={styles.image} />
           <View style={styles.textContainer}>
             <Text style={styles.title}>{itemData.title}</Text>
             <Text style={styles.bid}>Your Bid: ${item.bid_amount}</Text>

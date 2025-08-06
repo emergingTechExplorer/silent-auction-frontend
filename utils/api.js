@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const BASE_URL = "http://192.168.242.34:5000";
+// export const BASE_URL = "https://silent-auction-backend-0bdi.onrender.com";
 
 export const fetchItems = async () => {
   const res = await fetch(`${BASE_URL}/api/items`);
@@ -137,4 +138,15 @@ export const updateUserProfile = async (userId, updates) => {
   if (!res.ok) throw new Error(data.message || "Failed to update profile");
 
   return data;
+};
+
+export const getImageUrl = (path) => {
+  if (!path) return null;
+
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+
+  // Otherwise, it's a local path - prepend BASE_URL and add cache buster
+  return `${BASE_URL}/${path}`;
 };

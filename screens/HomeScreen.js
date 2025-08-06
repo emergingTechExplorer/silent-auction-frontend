@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
-import { fetchItems } from "../utils/api";
+import { fetchItems, getImageUrl } from "../utils/api";
 import { getDigitalCountdown } from "../utils/time";
 
 export default function HomeScreen({ navigation }) {
@@ -86,7 +86,7 @@ export default function HomeScreen({ navigation }) {
         style={styles.itemCard}
         onPress={() => navigation.navigate("ItemDetails", { item })}
       >
-        <Image source={{ uri: item.images?.[0] }} style={styles.image} />
+        <Image source={{ uri: getImageUrl(item.images?.[0]) }} style={styles.image} />
         <Text style={styles.itemTitle}>{item.title}</Text>
         <Text style={styles.itemPrice}>Starting at ${item.starting_bid}</Text>
         <Text style={styles.deadlineText}>Ends: {deadlineFormatted}</Text>

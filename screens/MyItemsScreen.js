@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { getCountdown } from "../utils/time";
-import { fetchMyUploadedItems } from "../utils/api";
+import { fetchMyUploadedItems, getImageUrl } from "../utils/api";
 
 export default function MyItemsScreen({ navigation }) {
   const [items, setItems] = useState([]);
@@ -63,10 +63,8 @@ export default function MyItemsScreen({ navigation }) {
         onPress={() => navigation.navigate("ItemDetails", { item })}
       >
         <View style={styles.row}>
-          <Image
-            source={{ uri: item.images[0] || "https://via.placeholder.com/100" }}
-            style={styles.image}
-          />
+          <Image source={{ uri: getImageUrl(item.images?.[0]) }} style={styles.image} />
+
           <View style={styles.textContainer}>
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.bid}>

@@ -12,7 +12,7 @@ import {
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
-import { BASE_URL } from "../utils/api" 
+import { BASE_URL } from "../utils/api";
 
 export default function UploadScreen() {
   const [title, setTitle] = useState("");
@@ -88,23 +88,29 @@ export default function UploadScreen() {
     }
 
     const token = await AsyncStorage.getItem("token");
+    const formData = new FormData();
 
-    const body = {
-      title,
-      description,
-      starting_bid: startingBid,
-      deadline: deadline.toISOString(),
-      images: imageUri ? [imageUri] : [],
-    };
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("starting_bid", startingBid);
+    formData.append("deadline", deadline.toISOString());
+
+    if (imageUri) {
+      formData.append("image", {
+        uri: imageUri,
+        name: "item.jpg",
+        type: "image/jpeg",
+      });
+    }
 
     try {
       const res = await fetch(`${BASE_URL}/api/items`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          "Content-Type": "multipart/form-data",
         },
-        body: JSON.stringify(body),
+        body: formData,
       });
 
       const data = await res.json();
@@ -151,12 +157,21 @@ export default function UploadScreen() {
       />
 
       <View style={styles.datetimeRow}>
-        <TouchableOpacity onPress={showDatePicker} style={styles.datetimeButton}>
+        <TouchableOpacity
+          onPress={showDatePicker}
+          style={styles.datetimeButton}
+        >
           <Text style={styles.datetimeText}>{deadline.toDateString()}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={showTimePicker} style={styles.datetimeButton}>
+        <TouchableOpacity
+          onPress={showTimePicker}
+          style={styles.datetimeButton}
+        >
           <Text style={styles.datetimeText}>
-            {deadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            {deadline.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </Text>
         </TouchableOpacity>
       </View>
