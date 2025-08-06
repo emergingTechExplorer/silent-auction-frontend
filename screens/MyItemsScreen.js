@@ -47,6 +47,28 @@ export default function MyItemsScreen({ navigation }) {
     }, [])
   );
 
+  // Live countdown refresh
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setItems((prev) => [...prev]);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getCountdown = (deadline) => {
+    const now = new Date();
+    const end = new Date(deadline);
+    const diff = end - now;
+
+    if (diff <= 0) return "Ended";
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+    return `${hours}h ${mins}m ${secs}s`;
+  };
+
   const renderItem = ({ item }) => {
     const highestBid =
       item.bids && item.bids.length > 0
@@ -54,8 +76,17 @@ export default function MyItemsScreen({ navigation }) {
         : "No bids";
 
     const deadlineDate = new Date(item.deadline);
-    const deadlineFormatted = deadlineDate.toLocaleDateString();
-    const hasEnded = deadlineDate < new Date();
+    const deadlineFormatted = deadlineDate.toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    const countdown = getCountdown(item.deadline);
+    const hasEnded = countdown === "Ended";
 
     return (
       <TouchableOpacity
@@ -76,6 +107,14 @@ export default function MyItemsScreen({ navigation }) {
               {highestBid !== "No bids" ? `$${highestBid}` : highestBid}
             </Text>
             <Text style={styles.deadline}>Deadline: {deadlineFormatted}</Text>
+            <Text
+              style={[
+                styles.countdown,
+                hasEnded ? { color: "red" } : { color: "#287778" },
+              ]}
+            >
+              {hasEnded ? "⛔ Auction Ended" : `⏳ Time Left: ${countdown}`}
+            </Text>
           </View>
         </View>
         <Text style={[styles.status, { color: hasEnded ? "red" : "green" }]}>
@@ -156,6 +195,11 @@ const styles = StyleSheet.create({
   deadline: {
     fontSize: 14,
     color: "#666",
+    marginTop: 4,
+  },
+  countdown: {
+    fontSize: 14,
+    fontWeight: "600",
     marginTop: 4,
   },
   status: {

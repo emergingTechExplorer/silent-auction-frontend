@@ -13,19 +13,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ItemDetailsScreen({ route }) {
   const item = route?.params?.item;
+  const BASE_URL = "http://192.168.242.34:5000"; // adjust if needed
+
+  const [bidAmount, setBidAmount] = useState("");
+  const [bids, setBids] = useState([]);
+  const [countdown, setCountdown] = useState("");
 
   if (!item) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <Text>Error: Item not found.</Text>
       </View>
     );
   }
-
-
-  const [bidAmount, setBidAmount] = useState("");
-  const [bids, setBids] = useState([]);
-  const BASE_URL = "http://192.168.242.34:5000"; // adjust if needed
 
   // Fetch bids
   useEffect(() => {
@@ -51,6 +51,29 @@ export default function ItemDetailsScreen({ route }) {
 
     fetchBids();
   }, [item._id]);
+
+  // Countdown timer logic
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const deadlineTime = new Date(item.deadline).getTime();
+      const diff = deadlineTime - now;
+
+      if (diff <= 0) {
+        setCountdown("Ended");
+        clearInterval(interval);
+        return;
+      }
+
+      const hours = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, "0");
+      const minutes = String(Math.floor((diff / (1000 * 60)) % 60)).padStart(2, "0");
+      const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, "0");
+
+      setCountdown(`${hours}:${minutes}:${seconds}`);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [item.deadline]);
 
   // Submit bid
   const placeBid = async () => {
@@ -102,19 +125,30 @@ export default function ItemDetailsScreen({ route }) {
       <Text style={styles.description}>Starting Bid: ${item.starting_bid}</Text>
       <Text style={styles.description}>
         Deadline:{" "}
-        {new Date(item.deadline).toLocaleDateString(undefined, {
+        {new Date(item.deadline).toLocaleString(undefined, {
           year: "numeric",
           month: "short",
           day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
         })}
+      </Text>
+
+      <Text
+        style={[
+          styles.timer,
+          countdown === "Ended" && { color: "red" },
+        ]}
+      >
+        {countdown === "Ended" ? "⛔ Auction Ended" : `⏳ Time Left: ${countdown}`}
       </Text>
 
       <Text style={styles.sectionTitle}>Bid History</Text>
 
-      {/* Table */}
+      {/* Updated Table */}
       <View style={styles.table}>
         <View style={[styles.tableRow, styles.tableHeader]}>
-          <Text style={[styles.tableCell, styles.headerText]}>Date</Text>
+          <Text style={[styles.tableCell, styles.headerText]}>Date & Time</Text>
           <Text style={[styles.tableCell, styles.headerText]}>Bid ($)</Text>
         </View>
 
@@ -122,16 +156,20 @@ export default function ItemDetailsScreen({ route }) {
           bids.map((bid) => (
             <View key={bid._id} style={styles.tableRow}>
               <Text style={styles.tableCell}>
-                {new Date(bid.bid_time).toLocaleDateString()}
+                {new Date(bid.bid_time).toLocaleString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </Text>
               <Text style={styles.tableCell}>${bid.bid_amount}</Text>
             </View>
           ))
         ) : (
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell} colSpan={2}>
-              No bids yet
-            </Text>
+            <Text style={styles.tableCell}>No bids yet</Text>
           </View>
         )}
       </View>
@@ -157,6 +195,8 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#fff",
     flexGrow: 1,
+    paddingTop: 60,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 26,
@@ -175,6 +215,12 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 14,
     marginBottom: 8,
+  },
+  timer: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#287778",
   },
   sectionTitle: {
     fontSize: 16,

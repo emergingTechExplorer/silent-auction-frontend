@@ -14,9 +14,6 @@ import NotificationsScreen from './screens/NotificationsScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import ItemDetailsScreen from './screens/ItemDetailsScreen';
 import MyItemsScreen from './screens/MyItemsScreen';
-import EditItemScreen from './screens/EditItemScreen';
-import ErrorScreen from './screens/ErrorScreen';
-import LoadingScreen from './screens/LoadingScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
 
 const Stack = createNativeStackNavigator();
@@ -79,9 +76,6 @@ export default function App() {
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="ItemDetails" component={ItemDetailsScreen} />
         <Stack.Screen name="MyItems" component={MyItemsScreen} />
-        <Stack.Screen name="EditItem" component={EditItemScreen} />
-        <Stack.Screen name="Error" component={ErrorScreen} />
-        <Stack.Screen name="Loading" component={LoadingScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

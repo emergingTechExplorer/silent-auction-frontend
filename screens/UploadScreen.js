@@ -7,32 +7,83 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
+  Image,
 } from "react-native";
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
 
-const BASE_URL = "http://192.168.242.34:5000"; // adjust if needed
+const BASE_URL = "http://192.168.242.34:5000"; // Replace with your backend IP
 
 export default function UploadScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startingBid, setStartingBid] = useState("");
-  const [category, setCategory] = useState("");
   const [deadline, setDeadline] = useState(new Date());
+  const [imageUri, setImageUri] = useState(null);
 
   const showDatePicker = () => {
     DateTimePickerAndroid.open({
       value: deadline,
-      onChange: (event, selectedDate) => {
-        if (selectedDate) setDeadline(selectedDate);
-      },
       mode: "date",
       is24Hour: true,
+      onChange: (event, selectedDate) => {
+        if (selectedDate) {
+          const updated = new Date(deadline);
+          updated.setFullYear(selectedDate.getFullYear());
+          updated.setMonth(selectedDate.getMonth());
+          updated.setDate(selectedDate.getDate());
+          setDeadline(updated);
+        }
+      },
     });
   };
 
+  const showTimePicker = () => {
+    DateTimePickerAndroid.open({
+      value: deadline,
+      mode: "time",
+      is24Hour: true,
+      onChange: (event, selectedTime) => {
+        if (selectedTime) {
+          const updated = new Date(deadline);
+          updated.setHours(selectedTime.getHours());
+          updated.setMinutes(selectedTime.getMinutes());
+          setDeadline(updated);
+        }
+      },
+    });
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission required", "Camera access is needed.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
   const handleUpload = async () => {
-    if (!title || !description || !startingBid || !category || !deadline) {
+    if (!title || !description || !startingBid || !deadline) {
       Alert.alert("Please fill in all fields");
       return;
     }
@@ -43,9 +94,8 @@ export default function UploadScreen() {
       title,
       description,
       starting_bid: startingBid,
-      category,
       deadline: deadline.toISOString(),
-      images: [], // optional, can be filled later
+      images: imageUri ? [imageUri] : [],
     };
 
     try {
@@ -68,8 +118,8 @@ export default function UploadScreen() {
       setTitle("");
       setDescription("");
       setStartingBid("");
-      setCategory("");
       setDeadline(new Date());
+      setImageUri(null);
     } catch (err) {
       Alert.alert("Error", err.message);
       console.error("Upload error:", err.message);
@@ -100,19 +150,34 @@ export default function UploadScreen() {
         keyboardType="numeric"
         style={styles.input}
       />
-      <TextInput
-        placeholder="Category"
-        value={category}
-        onChangeText={setCategory}
-        style={styles.input}
-      />
 
-      {/* Deadline Date Picker */}
-      <TouchableOpacity onPress={showDatePicker} style={styles.input}>
-        <Text>{deadline.toDateString()}</Text>
-      </TouchableOpacity>
+      <View style={styles.datetimeRow}>
+        <TouchableOpacity onPress={showDatePicker} style={styles.datetimeButton}>
+          <Text style={styles.datetimeText}>{deadline.toDateString()}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={showTimePicker} style={styles.datetimeButton}>
+          <Text style={styles.datetimeText}>
+            {deadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity onPress={handleUpload} style={styles.button}>
+      <Text style={styles.subheading}>Add Item Image</Text>
+
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+          <Text style={styles.buttonText}>Pick from Gallery</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
+          <Text style={styles.buttonText}>Take Photo</Text>
+        </TouchableOpacity>
+      </View>
+
+      {imageUri && (
+        <Image source={{ uri: imageUri }} style={styles.previewImage} />
+      )}
+
+      <TouchableOpacity onPress={handleUpload} style={styles.uploadButton}>
         <Text style={styles.buttonText}>Upload Item</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -142,18 +207,61 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     justifyContent: "center",
   },
-  button: {
+  datetimeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 15,
+  },
+  datetimeButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginHorizontal: 5,
+    alignItems: "center",
+  },
+  datetimeText: {
+    fontSize: 16,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 15,
+  },
+  imageButton: {
+    flex: 1,
+    backgroundColor: "#888",
+    paddingVertical: 10,
+    marginHorizontal: 5,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  uploadButton: {
     backgroundColor: "#287778",
     paddingVertical: 14,
     borderRadius: 10,
     width: "100%",
     alignItems: "center",
-    marginTop: 10,
     marginBottom: 30,
   },
   buttonText: {
     color: "#fff",
     fontWeight: "600",
+    fontSize: 14,
+  },
+  previewImage: {
+    width: "100%",
+    height: 180,
+    marginBottom: 20,
+    borderRadius: 10,
+  },
+  subheading: {
     fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 8,
   },
 });

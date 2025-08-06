@@ -8,44 +8,41 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  Image,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
 
-const BASE_URL = "http://192.168.242.34:5000"; // replace with your IP
+const BASE_URL = "http://192.168.242.34:5000"; // Replace with your local server IP
 
 export default function ProfileScreen({ navigation }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState(""); // Optional: not stored in backend
   const [loading, setLoading] = useState(true);
+  const [imageUri, setImageUri] = useState(null);
+  const [userId, setUserId] = useState(null);
 
-  useEffect(() => {
   const fetchProfile = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
       const user = await AsyncStorage.getItem("user");
-
       const parsedUser = JSON.parse(user);
-      const userId = parsedUser._id || parsedUser.id;
+      const uid = parsedUser._id || parsedUser.id;
+      setUserId(uid);
 
-      if (!token || !userId) {
-        throw new Error("Missing token or user ID.");
-      }
-
-      const response = await fetch(`${BASE_URL}/api/users/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await fetch(`${BASE_URL}/api/users/${uid}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch profile.");
-      }
+      if (!response.ok) throw new Error(data.message || "Failed to fetch profile");
 
       setName(data.name || "");
       setEmail(data.email || "");
+
+      if (data.profile_image) {
+        setImageUri(`${BASE_URL}/${data.profile_image}?t=${Date.now()}`);
+      }
     } catch (err) {
       console.error("Fetch profile error:", err);
       Alert.alert("Error", err.message || "Failed to load profile.");
@@ -54,18 +51,78 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  fetchProfile();
-}, []);
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      await uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission required", "Camera access is needed.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+
+    if (!result.canceled && result.assets.length > 0) {
+      await uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (uri) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const formData = new FormData();
+
+      formData.append("profileImage", {
+        uri,
+        name: "profile.jpg",
+        type: "image/jpeg",
+      });
+
+      const response = await fetch(`${BASE_URL}/api/users/${userId}/upload-profile-image`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to upload image");
+
+      const imageUrl = `${BASE_URL}/${data.profile_image}?t=${Date.now()}`;
+      setImageUri(imageUrl);
+
+      const currentUser = await AsyncStorage.getItem("user");
+      const updatedUser = {
+        ...(JSON.parse(currentUser) || {}),
+        profile_image: data.profile_image,
+      };
+      await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+
+      Alert.alert("Success", "Profile photo updated.");
+    } catch (err) {
+      console.error("Image upload error:", err);
+      Alert.alert("Error", err.message || "Image upload failed.");
+    }
+  };
 
   const handleSave = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-
-      const user = await AsyncStorage.getItem("user");
-      const parsedUser = JSON.parse(user);
-      const userId = parsedUser._id || parsedUser.id;
-
-      if (!userId) throw new Error("User ID not found in storage.");
 
       const response = await fetch(`${BASE_URL}/api/users/${userId}`, {
         method: "PUT",
@@ -77,10 +134,7 @@ export default function ProfileScreen({ navigation }) {
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to update profile.");
-      }
+      if (!response.ok) throw new Error(data.message || "Failed to update profile.");
 
       Alert.alert("Success", "Profile updated successfully.");
     } catch (err) {
@@ -107,6 +161,17 @@ export default function ProfileScreen({ navigation }) {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.header}>User Profile</Text>
 
+      {imageUri && <Image source={{ uri: imageUri }} style={styles.profileImage} />}
+
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+          <Text style={styles.smallButtonText}>Pick from Gallery</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
+          <Text style={styles.smallButtonText}>Take Photo</Text>
+        </TouchableOpacity>
+      </View>
+
       <TextInput
         value={name}
         onChangeText={setName}
@@ -118,13 +183,6 @@ export default function ProfileScreen({ navigation }) {
         placeholder="Email"
         editable={false}
         style={[styles.input, { color: "#999" }]}
-      />
-      <TextInput
-        value={phone}
-        onChangeText={setPhone}
-        placeholder="Phone Number"
-        keyboardType="phone-pad"
-        style={styles.input}
       />
 
       <View style={styles.buttonRow}>
@@ -166,6 +224,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 16,
   },
+  profileImage: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    marginBottom: 20,
+    backgroundColor: "#ddd",
+  },
   input: {
     width: "100%",
     height: 50,
@@ -187,6 +252,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#287778",
     paddingVertical: 12,
+    marginHorizontal: 5,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  imageButton: {
+    flex: 1,
+    backgroundColor: "#aaa",
+    paddingVertical: 10,
     marginHorizontal: 5,
     borderRadius: 10,
     alignItems: "center",
