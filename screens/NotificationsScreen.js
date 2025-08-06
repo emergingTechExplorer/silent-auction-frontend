@@ -5,38 +5,26 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const BASE_URL = 'http://192.168.242.34:5000';
+import { fetchNotifications } from '../utils/api';
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchNotifications = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${BASE_URL}/api/notifications`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || 'Failed to load notifications');
-      setNotifications(data);
-    } catch (err) {
-      console.error('Fetch notifications error:', err);
-      Alert.alert('Error', err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchNotifications();
+    const loadNotifications = async () => {
+      try {
+        const data = await fetchNotifications();
+        setNotifications(data);
+      } catch (err) {
+        console.error('Error loading notifications:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNotifications();
   }, []);
 
   const renderItem = ({ item }) => (
@@ -45,9 +33,7 @@ export default function NotificationsScreen() {
         <View
           style={[
             styles.dot,
-            {
-              backgroundColor: item.type === 'outbid' ? '#2ecc71' : '#00bcd4',
-            },
+            { backgroundColor: item.type === 'outbid' ? '#2ecc71' : '#00bcd4' },
           ]}
         />
         <Text style={styles.title}>
@@ -55,7 +41,10 @@ export default function NotificationsScreen() {
         </Text>
         <Text style={styles.dotSeparator}>•</Text>
         <Text style={styles.time}>
-          {new Date(item.created_at).toLocaleTimeString()}
+          {new Date(item.created_at).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
         </Text>
       </View>
       <Text style={styles.message}>{item.message}</Text>
@@ -79,7 +68,11 @@ export default function NotificationsScreen() {
         keyExtractor={(item) => item._id}
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 20 }}
-        ListEmptyComponent={<Text>No notifications found.</Text>}
+        ListEmptyComponent={
+          <Text style={{ textAlign: 'center', color: '#666' }}>
+            No notifications found.
+          </Text>
+        }
       />
     </View>
   );

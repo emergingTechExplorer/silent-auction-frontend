@@ -9,42 +9,29 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const BASE_URL = 'http://192.168.242.34:5000'; // Update if using emulator or physical device
+import { loginUser } from '../utils/auth';
 
 export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
 
+  const handleChange = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
   const handleLogin = async () => {
+    const { email, password } = form;
+
     if (!email || !password) {
       Alert.alert('Error', 'Please enter both email and password');
       return;
     }
 
     setLoading(true);
-
     try {
-      const response = await fetch(`${BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
-      // Save token and user info
+      const data = await loginUser(email, password);
       await AsyncStorage.setItem('token', data.token);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
-
-      // Navigate to Main tab
       navigation.replace('Main');
     } catch (err) {
       Alert.alert('Login Error', err.message);
@@ -59,8 +46,8 @@ export default function LoginScreen({ navigation }) {
 
       <TextInput
         placeholder="Email address"
-        value={email}
-        onChangeText={setEmail}
+        value={form.email}
+        onChangeText={(val) => handleChange('email', val)}
         keyboardType="email-address"
         autoCapitalize="none"
         style={styles.input}
@@ -68,8 +55,8 @@ export default function LoginScreen({ navigation }) {
 
       <TextInput
         placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
+        value={form.password}
+        onChangeText={(val) => handleChange('password', val)}
         secureTextEntry
         style={styles.input}
       />
@@ -83,6 +70,7 @@ export default function LoginScreen({ navigation }) {
       </TouchableOpacity>
 
       <Text style={styles.link}>Don't have an account?</Text>
+
       <TouchableOpacity onPress={() => navigation.navigate('Signup')} style={styles.button}>
         <Text style={styles.buttonText}>Sign Up</Text>
       </TouchableOpacity>

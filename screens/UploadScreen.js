@@ -12,8 +12,7 @@ import {
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
-
-const BASE_URL = "http://192.168.242.34:5000"; // Replace with your backend IP
+import { BASE_URL } from "../utils/api" 
 
 export default function UploadScreen() {
   const [title, setTitle] = useState("");

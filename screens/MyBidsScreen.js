@@ -9,66 +9,37 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const BASE_URL = 'http://192.168.242.34:5000'; // Replace with your IP
+import { fetchMyBids } from '../utils/api';
+import { getLiveCountdowns } from '../utils/time';
 
 export default function MyBidsScreen({ navigation }) {
   const [bids, setBids] = useState([]);
   const [countdowns, setCountdowns] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const fetchMyBids = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${BASE_URL}/api/bids/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || 'Failed to fetch bids');
-
-      setBids(data);
-    } catch (err) {
-      console.error('Error fetching my bids:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useFocusEffect(
     useCallback(() => {
-      fetchMyBids();
+      (async () => {
+        try {
+          const data = await fetchMyBids();
+          setBids(data);
+        } catch (err) {
+          console.error('Error fetching my bids:', err);
+        } finally {
+          setLoading(false);
+        }
+      })();
     }, [])
   );
 
-  // Countdown effect
   useEffect(() => {
     const interval = setInterval(() => {
-      const newCountdowns = {};
-
-      bids.forEach((bid) => {
-        const deadline = new Date(bid.item_id.deadline).getTime();
-        const now = Date.now();
-        const diff = deadline - now;
-
-        if (diff <= 0) {
-          newCountdowns[bid._id] = "Ended";
-        } else {
-          const hours = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, "0");
-          const minutes = String(Math.floor((diff / (1000 * 60)) % 60)).padStart(2, "0");
-          const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, "0");
-
-          newCountdowns[bid._id] = `${hours}:${minutes}:${seconds}`;
-        }
-      });
-
-      setCountdowns(newCountdowns);
+      const updated = getLiveCountdowns(bids.map(b => ({
+        id: b._id,
+        deadline: b.item_id.deadline
+      })));
+      setCountdowns(updated);
     }, 1000);
-
     return () => clearInterval(interval);
   }, [bids]);
 

@@ -9,45 +9,29 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const BASE_URL = "http://192.168.242.34:5000"; // Replace with your IP
+import { getCountdown } from "../utils/time";
+import { fetchMyUploadedItems } from "../utils/api";
 
 export default function MyItemsScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchMyItems = async () => {
+  const loadItems = async () => {
     try {
-      const token = await AsyncStorage.getItem("token");
-
-      const res = await fetch(`${BASE_URL}/api/items/my`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setItems(data);
-      } else {
-        console.error("Failed to fetch items:", data.message);
-      }
+      const data = await fetchMyUploadedItems();
+      setItems(data);
     } catch (err) {
-      console.error("Error fetching uploaded items:", err);
+      console.error("Error fetching uploaded items:", err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchMyItems();
-    }, [])
-  );
+  useFocusEffect(useCallback(() => {
+    loadItems();
+  }, []));
 
-  // Live countdown refresh
+  // Live countdown refresh every second
   useEffect(() => {
     const interval = setInterval(() => {
       setItems((prev) => [...prev]);
@@ -55,28 +39,13 @@ export default function MyItemsScreen({ navigation }) {
     return () => clearInterval(interval);
   }, []);
 
-  const getCountdown = (deadline) => {
-    const now = new Date();
-    const end = new Date(deadline);
-    const diff = end - now;
-
-    if (diff <= 0) return "Ended";
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const secs = Math.floor((diff % (1000 * 60)) / 1000);
-
-    return `${hours}h ${mins}m ${secs}s`;
-  };
-
   const renderItem = ({ item }) => {
     const highestBid =
       item.bids && item.bids.length > 0
         ? Math.max(...item.bids.map((b) => b.bid_amount))
         : "No bids";
 
-    const deadlineDate = new Date(item.deadline);
-    const deadlineFormatted = deadlineDate.toLocaleString(undefined, {
+    const deadlineFormatted = new Date(item.deadline).toLocaleString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -95,24 +64,16 @@ export default function MyItemsScreen({ navigation }) {
       >
         <View style={styles.row}>
           <Image
-            source={{
-              uri: item.images[0] || "https://via.placeholder.com/100",
-            }}
+            source={{ uri: item.images[0] || "https://via.placeholder.com/100" }}
             style={styles.image}
           />
           <View style={styles.textContainer}>
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.bid}>
-              Current Highest Bid:{" "}
-              {highestBid !== "No bids" ? `$${highestBid}` : highestBid}
+              Current Highest Bid: {highestBid !== "No bids" ? `$${highestBid}` : highestBid}
             </Text>
             <Text style={styles.deadline}>Deadline: {deadlineFormatted}</Text>
-            <Text
-              style={[
-                styles.countdown,
-                hasEnded ? { color: "red" } : { color: "#287778" },
-              ]}
-            >
+            <Text style={[styles.countdown, { color: hasEnded ? "red" : "#287778" }]}>
               {hasEnded ? "⛔ Auction Ended" : `⏳ Time Left: ${countdown}`}
             </Text>
           </View>
@@ -130,11 +91,7 @@ export default function MyItemsScreen({ navigation }) {
       <Text style={styles.screenTitle}>My Uploaded Items</Text>
 
       {loading ? (
-        <ActivityIndicator
-          size="large"
-          color="#287778"
-          style={{ marginTop: 30 }}
-        />
+        <ActivityIndicator size="large" color="#287778" style={{ marginTop: 30 }} />
       ) : (
         <FlatList
           data={items}

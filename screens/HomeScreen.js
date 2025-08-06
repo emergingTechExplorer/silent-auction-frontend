@@ -11,9 +11,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
-import { Ionicons } from "@expo/vector-icons";
-
-const BASE_URL = "http://192.168.242.34:5000";
+import { fetchItems } from "../utils/api";
+import { getDigitalCountdown } from "../utils/time";
 
 export default function HomeScreen({ navigation }) {
   const [items, setItems] = useState([]);
@@ -21,7 +20,6 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Dropdown states
   const [open, setOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
   const [statusOptions, setStatusOptions] = useState([
@@ -30,21 +28,18 @@ export default function HomeScreen({ navigation }) {
     { label: "Ended", value: "ended" },
   ]);
 
-  const fetchItems = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/api/items`);
-      const data = await res.json();
-      setItems(data);
-    } catch (error) {
-      console.error("Error fetching items:", error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useFocusEffect(
     useCallback(() => {
-      fetchItems();
+      (async () => {
+        try {
+          const data = await fetchItems();
+          setItems(data);
+        } catch (err) {
+          console.error("Error fetching items:", err.message);
+        } finally {
+          setLoading(false);
+        }
+      })();
     }, [])
   );
 
@@ -73,34 +68,17 @@ export default function HomeScreen({ navigation }) {
     setFilteredItems(result);
   }, [items, searchQuery, filterStatus]);
 
-  const getCountdown = (deadline) => {
-    const now = new Date();
-    const end = new Date(deadline);
-    const diff = end - now;
-
-    if (diff <= 0) return "Ended";
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const secs = Math.floor((diff % (1000 * 60)) / 1000);
-
-    return `${hours}h ${mins}m ${secs}s`;
-  };
-
   const renderItem = ({ item }) => {
-    const deadlineFormatted = new Date(item.deadline).toLocaleString(
-      undefined,
-      {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }
-    );
+    const deadlineFormatted = new Date(item.deadline).toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
 
-    const countdown = getCountdown(item.deadline);
+    const countdown = getDigitalCountdown(item.deadline);
     const isEnded = countdown === "Ended";
 
     return (
@@ -112,9 +90,7 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.itemTitle}>{item.title}</Text>
         <Text style={styles.itemPrice}>Starting at ${item.starting_bid}</Text>
         <Text style={styles.deadlineText}>Ends: {deadlineFormatted}</Text>
-        <Text
-          style={[styles.countdown, { color: isEnded ? "#888" : "#d9534f" }]}
-        >
+        <Text style={[styles.countdown, { color: isEnded ? "#888" : "#d9534f" }]}> 
           {isEnded ? "⛔ Ended" : `⏳ ${countdown}`}
         </Text>
       </TouchableOpacity>
@@ -190,7 +166,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginBottom: 16,
     alignItems: "center",
-    zIndex: 1000, // for DropDownPicker
+    zIndex: 1000,
   },
   searchInput: {
     flex: 1,

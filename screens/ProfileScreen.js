@@ -12,134 +12,77 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
-
-const BASE_URL = "http://192.168.242.34:5000"; // Replace with your local server IP
+import {
+  fetchUserProfile,
+  updateProfileImage,
+  updateUserProfile,
+} from "../utils/api";
 
 export default function ProfileScreen({ navigation }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(true);
   const [imageUri, setImageUri] = useState(null);
   const [userId, setUserId] = useState(null);
-
-  const fetchProfile = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      const user = await AsyncStorage.getItem("user");
-      const parsedUser = JSON.parse(user);
-      const uid = parsedUser._id || parsedUser.id;
-      setUserId(uid);
-
-      const response = await fetch(`${BASE_URL}/api/users/${uid}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to fetch profile");
-
-      setName(data.name || "");
-      setEmail(data.email || "");
-
-      if (data.profile_image) {
-        setImageUri(`${BASE_URL}/${data.profile_image}?t=${Date.now()}`);
-      }
-    } catch (err) {
-      console.error("Fetch profile error:", err);
-      Alert.alert("Error", err.message || "Failed to load profile.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProfile();
+    const loadProfile = async () => {
+      try {
+        const userData = await fetchUserProfile();
+        setUserId(userData._id);
+        setName(userData.name || "");
+        setEmail(userData.email || "");
+
+        if (userData.profile_image) {
+          setImageUri(userData.profile_image);
+        }
+      } catch (err) {
+        Alert.alert("Error", err.message || "Failed to load profile.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
   }, []);
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-    });
+  const chooseImage = async (source) => {
+    const permission =
+      source === "camera"
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (!result.canceled && result.assets.length > 0) {
-      await uploadImage(result.assets[0].uri);
-    }
-  };
-
-  const takePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Permission required", "Camera access is needed.");
+      Alert.alert("Permission required", "Camera or Gallery access is needed.");
       return;
     }
 
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    const result =
+      source === "camera"
+        ? await ImagePicker.launchCameraAsync({ quality: 0.7 })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.7,
+          });
 
     if (!result.canceled && result.assets.length > 0) {
-      await uploadImage(result.assets[0].uri);
+      try {
+        const uri = result.assets[0].uri;
+        const updatedImageUri = await updateProfileImage(userId, uri);
+        setImageUri(updatedImageUri);
+        Alert.alert("Success", "Profile photo updated.");
+      } catch (err) {
+        Alert.alert("Error", err.message);
+      }
     }
   };
 
-  const uploadImage = async (uri) => {
+  const handleUpdateProfile = async () => {
     try {
-      const token = await AsyncStorage.getItem("token");
-      const formData = new FormData();
-
-      formData.append("profileImage", {
-        uri,
-        name: "profile.jpg",
-        type: "image/jpeg",
-      });
-
-      const response = await fetch(`${BASE_URL}/api/users/${userId}/upload-profile-image`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to upload image");
-
-      const imageUrl = `${BASE_URL}/${data.profile_image}?t=${Date.now()}`;
-      setImageUri(imageUrl);
-
-      const currentUser = await AsyncStorage.getItem("user");
-      const updatedUser = {
-        ...(JSON.parse(currentUser) || {}),
-        profile_image: data.profile_image,
-      };
-      await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
-
-      Alert.alert("Success", "Profile photo updated.");
+      await updateUserProfile(userId, { name });
+      Alert.alert("Success", "Profile updated.");
     } catch (err) {
-      console.error("Image upload error:", err);
-      Alert.alert("Error", err.message || "Image upload failed.");
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-
-      const response = await fetch(`${BASE_URL}/api/users/${userId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to update profile.");
-
-      Alert.alert("Success", "Profile updated successfully.");
-    } catch (err) {
-      console.error("Update profile error:", err);
-      Alert.alert("Error", err.message || "Could not update profile.");
+      Alert.alert("Error", err.message);
     }
   };
 
@@ -164,10 +107,16 @@ export default function ProfileScreen({ navigation }) {
       {imageUri && <Image source={{ uri: imageUri }} style={styles.profileImage} />}
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+        <TouchableOpacity
+          style={styles.imageButton}
+          onPress={() => chooseImage("gallery")}
+        >
           <Text style={styles.smallButtonText}>Pick from Gallery</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
+        <TouchableOpacity
+          style={styles.imageButton}
+          onPress={() => chooseImage("camera")}
+        >
           <Text style={styles.smallButtonText}>Take Photo</Text>
         </TouchableOpacity>
       </View>
@@ -192,7 +141,7 @@ export default function ProfileScreen({ navigation }) {
         >
           <Text style={styles.smallButtonText}>My Bids</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.smallButton} onPress={handleSave}>
+        <TouchableOpacity style={styles.smallButton} onPress={handleUpdateProfile}>
           <Text style={styles.smallButtonText}>Save</Text>
         </TouchableOpacity>
         <TouchableOpacity

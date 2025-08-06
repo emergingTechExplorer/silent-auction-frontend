@@ -9,8 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const BASE_URL = 'http://192.168.242.34:5000'; // Change to IP if needed
+import { BASE_URL } from "../utils/api" 
 
 export default function SignupScreen({ navigation }) {
   const [name, setName] = useState('');
@@ -56,7 +55,7 @@ export default function SignupScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Sign Up Here</Text>
-      <Text style={styles.subtitle}>to start planning your trip like a pro!</Text>
+      <Text style={styles.subtitle}>to start winning!</Text>
 
       <TextInput
         placeholder="Name"
