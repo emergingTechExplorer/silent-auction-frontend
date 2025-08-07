@@ -156,24 +156,29 @@ export default function UploadScreen() {
         style={styles.input}
       />
 
-      <View style={styles.datetimeRow}>
-        <TouchableOpacity
-          onPress={showDatePicker}
-          style={styles.datetimeButton}
-        >
-          <Text style={styles.datetimeText}>{deadline.toDateString()}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={showTimePicker}
-          style={styles.datetimeButton}
-        >
-          <Text style={styles.datetimeText}>
-            {deadline.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.deadlineContainer}>
+        <Text style={styles.label}>Select Deadline:</Text>
+
+        <View style={styles.datetimeRow}>
+          <TouchableOpacity
+            onPress={showDatePicker}
+            style={styles.datetimeButton}
+          >
+            <Text style={styles.datetimeText}>{deadline.toDateString()}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={showTimePicker}
+            style={styles.datetimeButton}
+          >
+            <Text style={styles.datetimeText}>
+              {deadline.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Text style={styles.subheading}>Add Item Image</Text>
@@ -277,5 +282,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
     marginBottom: 8,
+  },
+  deadlineContainer: {
+    width: "100%",
+    marginBottom: 10,
+  },
+
+  label: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginBottom: 5,
+    color: "#333",
   },
 });

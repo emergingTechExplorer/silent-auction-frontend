@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// export const BASE_URL = "http://192.168.242.34:5000";
 export const BASE_URL = "https://silent-auction-backend-0bdi.onrender.com";
 
 export const fetchItems = async () => {
